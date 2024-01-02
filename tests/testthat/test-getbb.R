@@ -1,10 +1,5 @@
 has_internet <- curl::has_internet ()
 
-test_all <- (identical (Sys.getenv ("MPADGE_LOCAL"), "true") |
-    identical (Sys.getenv ("GITHUB_WORKFLOW"), "test-coverage"))
-
-set_overpass_url ("https://overpass-api.de/api/interpreter")
-
 test_that ("bbox", {
 
     expect_error (bbox_to_string (), "bbox must be provided")
@@ -14,6 +9,10 @@ test_that ("bbox", {
     expect_message (
         bbox_to_string (1:5),
         "only the first four elements of bbox used"
+    )
+    expect_error (
+        bbox_to_string (data.frame (a = "type", b = "id")),
+        "bbox must be a data.frame with osm_type and osm_id columns"
     )
 })
 
@@ -37,7 +36,7 @@ test_that ("getbb-place_name", {
     )
     range0 <- apply (res0, 1, function (i) diff (range (i)))
     range2 <- apply (res2, 1, function (i) diff (range (i)))
-    expect_true (all (range2 > range0))
+    expect_true (all (range2 >= range0))
 
     expect_output (
         res0 <- with_mock_dir ("mock_bb", {
@@ -57,6 +56,21 @@ test_that ("getbb-place_name", {
             getbb (place_name = "Salzburg", format_out = "no format")
         }),
         "format_out not recognised"
+    )
+
+    expect_silent (
+        res6 <- with_mock_dir ("mock_bb_df", {
+            getbb (place_name = "Salzburg", format_out = "osm_type_id")
+        })
+    )
+    expect_is (res6, "character")
+    expect_length (res6, 1L)
+
+    expect_error (
+        with_mock_dir ("mock_bb_typo", {
+            getbb ("Salzzburg")
+        }),
+        "`place_name` 'Salzzburg' can't be found"
     )
 })
 
@@ -133,4 +147,14 @@ test_that ("bbox-to-string", {
     bb <- 1:4
     names (bb) <- c ("left", "bottom", "right", "top")
     expect_is (bbox_to_string (bb), "character")
+
+    area <- data.frame (osm_type = "relation", osm_id = "11747082")
+    expect_is (bbox_to_string (area), "character")
+    expect_length (bbox_to_string (area), 1)
+    area <- data.frame (
+        osm_type = c ("relation", "relation", "way"),
+        osm_id = c ("11747082", "307833", "22422490")
+    )
+    expect_is (bbox_to_string (area), "character")
+    expect_length (bbox_to_string (area), 1)
 })

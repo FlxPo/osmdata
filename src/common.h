@@ -30,7 +30,17 @@
 
 #pragma once
 
+// These lines suppress two classes of warnings from rapidxml, but note that
+// this is forbidden on CRAN:
+// https://cran.r-project.org/web/packages/policies.html
+
+// #pragma GCC diagnostic push
+// #pragma GCC diagnostic ignored "-Wdeprecated-dynamic-exception-spec"
+// #pragma GCC diagnostic ignored "-Wzero-as-null-pointer-constant"
 #include "rapidxml.h"
+// #pragma GCC diagnostic pop
+
+#include <Rcpp.h> // Only for 'NA_REAL'
 
 // APS not good pratice to have all the headers included here, adds to compile time
 // better to #include as and where needed, ideally in source rather than headers,
@@ -100,15 +110,17 @@ struct UniqueVals
 struct RawNode
 {
     osmid_t id;
+    std::string _version = "", _timestamp = "", _changeset = "", _uid = "", _user = ""; // metadata
     std::vector <std::string> key, value;
-    double lat, lon;
+    double lat = NA_REAL, lon = NA_REAL;
 };
 
 struct Node
 {
     osmid_t id;
+    std::string _version = "", _timestamp = "", _changeset = "", _uid = "", _user = ""; // metadata
     std::map <std::string, std::string> key_val;
-    double lat, lon;
+    double lat = NA_REAL, lon = NA_REAL;
 };
 
 /* Traversing the XML tree means keys and values are read sequentially and
@@ -118,6 +130,8 @@ struct Node
 struct RawWay
 {
     osmid_t id;
+    std::string _version, _timestamp, _changeset, _uid, _user; // metadata
+    double _lat = NA_REAL, _lon = NA_REAL; // center
     std::vector <std::string> key, value;
     std::vector <osmid_t> nodes;
 };
@@ -125,6 +139,8 @@ struct RawWay
 struct OneWay
 {
     osmid_t id;
+    std::string _version, _timestamp, _changeset, _uid, _user; // metadata
+    double _lat = NA_REAL, _lon = NA_REAL; // center
     std::map <std::string, std::string> key_val;
     std::vector <osmid_t> nodes;
 };
@@ -134,6 +150,8 @@ struct RawRelation
     bool ispoly;
     osmid_t id;
     std::string member_type;
+    std::string _version, _timestamp, _changeset, _uid, _user; // metadata
+    double _lat = NA_REAL, _lon = NA_REAL; // center
     // APS would (key,value) be better in a std::map?
     std::vector <std::string> key, value, role_node, role_way, role_relation;
     std::vector <osmid_t> nodes;
@@ -146,6 +164,8 @@ struct Relation
     bool ispoly;
     osmid_t id;
     std::string rel_type;
+    std::string _version, _timestamp, _changeset, _uid, _user; // metadata
+    double _lat = NA_REAL, _lon = NA_REAL; // center
     std::map <std::string, std::string> key_val;
     // Relations may have nodes as members, but these are not used here.
     std::vector <std::pair <osmid_t, std::string> > nodes; // str = role

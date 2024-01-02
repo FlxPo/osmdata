@@ -4,17 +4,58 @@
 \alias{opq_osm_id}
 \title{Add a feature specified by OSM ID to an Overpass query}
 \usage{
-opq_osm_id(id = NULL, type = NULL, open_url = FALSE)
+opq_osm_id(
+  id = NULL,
+  type = NULL,
+  open_url = FALSE,
+  out = "body",
+  datetime = NULL,
+  datetime2 = NULL,
+  adiff = FALSE,
+  timeout = 25,
+  memsize
+)
 }
 \arguments{
 \item{id}{One or more official OSM identifiers (long-form integers), which
-must be entered as either a character or \emph{numeric} value (because R does not
-support long-form integers).}
+must be entered as either a character or \emph{numeric} value (because R does
+not support long-form integers). id can also be a character string
+prefixed with the id type, e.g. "relation/11158003"}
 
-\item{type}{Type of object; must be either \code{node}, \code{way}, or \code{relation}}
+\item{type}{Type of objects (recycled); must be either \code{node}, \code{way}, or
+\code{relation}. Optional if id is prefixed with the type.}
 
 \item{open_url}{If \code{TRUE}, open the OSM page of the specified object in web
-browser. Multiple objects (\code{id} values) will be opened in multiple pages.}
+browser. Multiple objects (\code{id} values) will be opened in multiple
+pages.}
+
+\item{out}{The level of verbosity of the overpass result: \code{body} (geometries
+and tags, the default), \code{tags} (tags without geometry), \code{meta} (like
+body + Timestamp, Version, Changeset, User, User ID of the last
+edition), \code{skel} (geometries only), \verb{tags center} (tags without geometry
++ the coordinates of the center of the bounding box) and \code{ids} (type and
+id of the objects only).}
+
+\item{datetime}{If specified, a date and time to extract data from the OSM
+database as it was up to the specified date and time, as described at
+\url{https://wiki.openstreetmap.org/wiki/Overpass_API/Overpass_QL#date}.
+This \emph{must} be in ISO8601 format ("YYYY-MM-DDThh:mm:ssZ"), where
+both the "T" and "Z" characters must be present.}
+
+\item{datetime2}{If specified, return the \emph{difference} in the OSM
+database between \code{datetime} and \code{datetime2}, where
+\code{datetime2 > datetime}. See
+\url{https://wiki.openstreetmap.org/wiki/Overpass_API/Overpass_QL#Difference_between_two_dates_(diff)}.}
+
+\item{adiff}{If \code{TRUE}, query for \href{https://wiki.openstreetmap.org/wiki/Overpass_API/Overpass_QL#Augmented-difference_between_two_dates_(adiff)}{augmented difference}.
+The result indicates what happened to the modified and deleted OSM
+objects. Requires \verb{datetime(2)*}.}
+
+\item{timeout}{It may be necessary to increase this value for large queries,
+because the server may time out before all data are delivered.}
+
+\item{memsize}{The default memory size for the 'overpass' server in \emph{bytes};
+may need to be increased in order to handle large queries.}
 }
 \value{
 \link{opq} object
@@ -41,6 +82,12 @@ dat2 <- opq_osm_id (type = "way", id = id) \%>\%
     osmdata_sf ()
 dat2$osm_lines # the desired ways
 dat <- c (dat1, dat2) # The node and way data combined
+# All in one (same result as dat)
+id <- c (1489221200, 1489221321, 1489221491, 136190595, 136190596)
+type <- c ("node", "node", "node", "way", "way")
+datAiO <- opq_osm_id (id = id, type = type) \%>\%
+    opq_string () \%>\%
+    osmdata_sf ()
 }
 }
 \references{
@@ -53,6 +100,7 @@ Other queries:
 \code{\link{bbox_to_string}()},
 \code{\link{getbb}()},
 \code{\link{opq_around}()},
+\code{\link{opq_csv}()},
 \code{\link{opq_enclosing}()},
 \code{\link{opq_string}()},
 \code{\link{opq}()},

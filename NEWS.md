@@ -1,5 +1,82 @@
-0.1.10.00X (dev)
+
+0.2.5.00x (dev version)
 ===================
+
+## Major changes
+
+- Implemented `c.osmdata_sc` method to join `osmdata_sc` objects (#333)
+
+
+0.2.5
+===================
+
+## Major changes
+
+- v0.2.4 was removed without notice from CRAN because of #329; this is a rapid re-submission
+
+0.2.4
+===================
+
+## Minor changes
+
+- Bug fix to stop getbb call to Nominatim returning 405 error (#328)
+
+
+0.2.3
+===================
+
+## Minor changes
+
+- Fix failing test due to changes to 'sp' moving towards deprecation.
+
+
+0.2.2
+===================
+
+## Major changes:
+
+- `osmdata_data_frame` adds columns `osm_center_lat` and `osm_center_lon` for `out * center;` queries (#316, #319).
+- Add parameters from `opq` to `opq_osm_id`: out, datetime, datetime2, adiff, timeout and memsize (#320)
+- Fix `available_tags()` function which no longer worked (#322 thanks to @boiled-data)
+- Implement `out:csv` queries (#321).
+
+## Minor changes
+
+- Fix queries with `!match_case` and only one value (#317).
+- Fix queries with multiple features & multiple osm_types (#318).
+
+0.2.1
+===================
+
+## Major changes:
+
+- Very soft deprecation of `nodes_only` parameter in `opq` (#308, #312).
+
+## Minor changes
+
+- Couple of minor memory leak bug fixes in `osmdata_data_frame` C++ code.
+
+0.2.0
+===================
+
+This release welcomes a new package author @jmaspons. The lists of changes here gives an overview of the amazing work he has contributed to this new major version.
+
+## Major changes:
+
+- New `osmdata_data_frame()` function to return non-spatial `data.frame` structures directly from overpass; thanks to @jmaspons (#285).
+- Improved `add_osm_features` so that key-values pairs can be submitted as a list, rather than escape-delimited character strings; thanks to @elipousson (#277, #278).
+- `opq()` can now utilise overpass ability to filter results by area; thanks to @jmaspons (#286).
+- `opq()` now has additional "out" parameter to control the kinds of data returned by overpass; thanks to @jmaspons (#288).
+- `opq()` now has additional "osm_types" parameter to provide finer control of which kinds of data are returned by overpass; thanks to @jmaspons (#295).
+- Fix key modifications for non-valid column names and handle duplicated column names in `osmdata_*` functions; by @jmaspons (#303)
+- @elipousson is new package contributor, thanks to the above work.
+- @jmaspons is new package author, thanks to #285 (plus most of the above, and a whole lot more!)
+
+## Minor changes:
+
+- Downgraded `sp` from "Imports" to "Suggests"; thanks to @jmaspons (#302)
+- Improved `osm_osm_id()` to accept vectors of ids and types; thanks to @jmaspons (#268, #282, #283)
+- "get-osmdata.R" file now split into several smaller and more manageable files (#306, thanks to @jmaspons)
 
 0.1.10
 ===================

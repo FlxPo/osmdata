@@ -1,11 +1,13 @@
 Package: osmdata
 Title: Import 'OpenStreetMap' Data as Simple Features or Spatial Objects
-Version: 0.1.10.003
+Version: 0.2.5.005
 Authors@R: c(
     person("Mark", "Padgham", , "mark.padgham@email.com", role = c("aut", "cre")),
     person("Bob", "Rudis", role = "aut"),
     person("Robin", "Lovelace", role = "aut"),
     person("Maëlle", "Salmon", role = "aut"),
+    person("Joan", "Maspons", role = "aut",
+           comment = c(ORCID="0000-0003-2286-8727")),
     person("Andrew", "Smith", role = "ctb"),
     person("James", "Smith", role = "ctb"),
     person("Andrea", "Gilardi", role = "ctb"),
@@ -13,7 +15,9 @@ Authors@R: c(
     person("Anthony", "North", role = "ctb"),
     person("Martin", "Machyna", role = "ctb"),
     person("Marcin", "Kalicinski", role = c("ctb", "cph"),
-           comment = "Author of included RapidXML code")
+           comment = "Author of included RapidXML code"),
+    person("Eli", "Pousson", , "eli.pousson@gmail.com", role = c("ctb"),
+           comment = c(ORCID = "0000-0001-8280-1706"))
   )
 Maintainer: Mark Padgham <mark.padgham@email.com>
 Description: Download and import of 'OpenStreetMap' ('OSM') data as 'sf'
@@ -35,7 +39,6 @@ Imports:
     Rcpp (>= 0.12.4),
     reproj,
     rvest,
-    sp,
     tibble,
     utils,
     xml2
@@ -47,6 +50,7 @@ Suggests:
     raster,
     rmarkdown,
     sf,
+    sp,
     testthat
 LinkingTo:
     Rcpp
@@ -55,8 +59,7 @@ VignetteBuilder:
 Encoding: UTF-8
 NeedsCompilation: yes
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.2.0
-SystemRequirements: C++11
+RoxygenNote: 7.2.3
 X-schema.org-applicationCategory: Data Access
 X-schema.org-isPartOf: https://ropensci.org
 X-schema.org-keywords: open0street0map, openstreetmap, overpass0API, OSM

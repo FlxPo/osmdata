@@ -24,3 +24,5 @@ makefile$
 ^codemeta\.json$
 ^\.github$
 ^\.pre-commit-config\.yaml$
+^revdep$
+^CRAN-SUBMISSION$

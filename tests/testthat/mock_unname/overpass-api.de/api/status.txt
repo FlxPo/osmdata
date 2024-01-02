@@ -1,6 +1,8 @@
 Connected as: 123456789
 Current time: 2022-01-01T00:00:00Z
-Announced endpoint: none
-Rate limit: 2
-2 slots available now.
+Announced endpoint: z.overpass-api.de/api/
+Rate limit: 3
+1 slots available now.
+Slot available after: 2022-01-01T00:00:00Z, in 2 seconds.
+Slot available after: 2022-01-01T00:00:00Z, in 3 seconds.
 Currently running queries (pid, space limit, time limit, start time):

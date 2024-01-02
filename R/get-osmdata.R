@@ -32,6 +32,7 @@ get_timestamp <- function (doc) {
     paste ("[", wday_t, wday, mon, year, hms, "]")
 }
 
+
 #' Get OSM database version
 #'
 #' @param doc OSM XML document
@@ -42,6 +43,7 @@ get_osm_version <- function (doc) {
 
     xml2::xml_text (xml2::xml_find_all (doc, "//osm/@version"))
 }
+
 
 #' Get overpass version
 #'
@@ -54,115 +56,91 @@ get_overpass_version <- function (doc) {
     xml2::xml_text (xml2::xml_find_all (doc, "//osm/@generator"))
 }
 
-#' Return an OSM Overpass query in XML format
-#' Read an (XML format) OSM Overpass response from a string, a connection,
-#' or a raw vector.
-#'
-#' @param q An object of class `overpass_query` constructed with
-#' \link{opq} and \link{add_osm_feature}.
-#' @param filename If given, OSM data are saved to the named file
-#' @param quiet suppress status messages.
-#' @param encoding Unless otherwise specified XML documents are assumed to be
-#'        encoded as UTF-8 or UTF-16. If the document is not UTF-8/16, and lacks
-#'        an explicit encoding directive, this allows you to supply a default.
-#' @return An object of class `XML::xml_document` containing the result of the
-#'         overpass API query.
-#'
-#' @note Objects of class `xml_document` can be saved as `.xml` or
-#' `.osm` files with `xml2::write_xml`.
-#'
-#' @family extract
-#' @export
-#'
-#' @examples
-#' \dontrun{
-#' q <- opq ("hampi india")
-#' q <- add_osm_feature (q, key = "historic", value = "ruins")
-#' osmdata_xml (q, filename = "hampi.osm")
-#' }
-osmdata_xml <- function (q, filename, quiet = TRUE, encoding) {
 
-    if (missing (encoding)) {
-        encoding <- "UTF-8"
+#' Check for not implemented queries in overpass call
+#'
+#' Detects adiff, out meta/ids/tags and out:csv queries which are not
+#' implemented for osmdata_* functions except for osmdata_xml (no out:csv) and
+#' osmdata_data_frame.
+#'
+#' @param obj Initial \link{osmdata} object
+#'
+#' @return Nothing. Throw errors or warnings for not implemented queries.
+#'
+#' @noRd
+check_not_implemented_queries <- function (obj) {
+    if (!is.null (obj$overpass_call)) {
+
+        if (grepl ("; out (tags|ids)( center)*;$", obj$overpass_call)) {
+            stop (
+                "Queries returning no geometries (out tags/ids) not accepted. ",
+                'Use queries with `out="body"` or `out="skel"` instead. ',
+                "Alternatively, you can retrieve the results with osmdata_xml ",
+                "or osmdata_data_frame.",
+                call. = FALSE
+            )
+        }
+
+        if (grepl ("\\[adiff:", obj$overpass_call)) {
+            stop (
+                "adiff queries not yet implemented. Alternatively, you can ",
+                "retrieve the results with osmdata_xml or ",
+                "osmdata_data_frame.",
+                call. = FALSE
+            )
+        }
+
+        if (grepl ("\\[out:csv", obj$overpass_call)) {
+            stop ("out:csv queries only work with osmdata_data_frame.")
+        }
+
+        if (grepl ("out meta;$", obj$overpass_call)) {
+            warning (
+                "`out meta` queries not yet implemented. Metadata fields will ",
+                "be missing. Alternatively, you can retrieve the results with ",
+                "osmdata_xml or osmdata_data_frame.",
+                call. = FALSE
+            )
+        }
+
     }
-
-    if (missing (q) & !quiet) {
-        message ("q missing: osmdata object will not include query")
-    } else if (is (q, "overpass_query")) {
-        q <- opq_string_intern (q, quiet = quiet)
-    } else if (!is.character (q)) {
-        stop ("q must be an overpass query or a character string")
-    }
-
-    doc <- overpass_query (query = q, quiet = quiet, encoding = encoding)
-    if (!missing (filename)) {
-        xml2::write_xml (doc, file = filename)
-    }
-
-    invisible (doc)
 }
 
-#' Return an OSM Overpass query as an \link{osmdata} object in \pkg{sp}
-#' format.
-#'
-#' @param q An object of class `overpass_query` constructed with
-#'      \link{opq} and \link{add_osm_feature}. May be be omitted,
-#'      in which case the \link{osmdata} object will not include the
-#'      query.
-#' @param doc If missing, `doc` is obtained by issuing the overpass query,
-#'        `q`, otherwise either the name of a file from which to read data,
-#'        or an object of class \pkg{XML} returned from
-#'        \link{osmdata_xml}.
-#' @param quiet suppress status messages.
-#'
-#' @return An object of class `osmdata` with the OSM components (points, lines,
-#'         and polygons) represented in \pkg{sp} format.
-#'
-#' @family extract
-#' @export
-#'
-#' @examples
-#' \dontrun{
-#' hampi_sp <- opq ("hampi india") %>%
-#'     add_osm_feature (key = "historic", value = "ruins") %>%
-#'     osmdata_sp ()
-#' }
-osmdata_sp <- function (q, doc, quiet = TRUE) {
 
-    obj <- osmdata () # uses class def
-    if (missing (q) & !quiet) {
-        message ("q missing: osmdata object will not include query")
-    } else if (is (q, "overpass_query")) {
-        obj$bbox <- q$bbox
-        obj$overpass_call <- opq_string_intern (q, quiet = quiet)
-    } else if (is.character (q)) {
-        obj$overpass_call <- q
-    } else {
-        stop ("q must be an overpass query or a character string")
+fix_duplicated_columns <- function (x) {
+    dup <- duplicated (x)
+    i <- 1
+    while (any (dup)) {
+        x[dup] <- paste0 (x[dup], ".", i)
+        i <- i + 1
+        dup <- duplicated (x)
     }
 
-    temp <- fill_overpass_data (obj, doc, quiet = quiet)
-    obj <- temp$obj
-    doc <- temp$doc
-
-    if (!quiet) {
-        message ("converting OSM data to sp format")
-    }
-
-    res <- rcpp_osmdata_sp (paste0 (doc))
-    if (is.null (obj$bbox)) {
-        obj$bbox <- paste (res$bbox, collapse = " ")
-    }
-    obj$osm_points <- res$points
-    obj$osm_lines <- res$lines
-    obj$osm_polygons <- res$polygons
-    obj$osm_multilines <- res$multilines
-    obj$osm_multipolygons <- res$multipolygons
-
-    class (obj) <- c (class (obj), "osmdata_sp")
-
-    return (obj)
+    return (x)
 }
+
+
+fix_columns_list <- function (l) {
+    cols <- lapply (l, names)
+    cols_no_dup <- lapply (cols, fix_duplicated_columns)
+    if (!identical (cols, cols_no_dup)) {
+        warning (
+            "Feature keys clash with id or metadata columns and will be ",
+            "renamed by appending `.n`:\n\t",
+            paste (
+                unique (setdiff (unlist (cols_no_dup), unlist(cols))),
+                collapse = ", "
+            )
+        )
+        l <- mapply (function (x, col) {
+            suppressWarnings (names (x) <- col)
+            x
+        }, x = l, col = cols_no_dup, SIMPLIFY = FALSE)
+    }
+
+    return (l)
+}
+
 
 #' fill osmdata object with overpass data and metadata, and return character
 #' version of OSM xml document
@@ -190,10 +168,7 @@ fill_overpass_data <- function (obj, doc, quiet = TRUE, encoding = "UTF-8") {
             if (!file.exists (doc)) {
                 stop ("file ", doc, " does not exist")
             }
-            # nch <- file.info (doc)$size
-            # doc_xml <- xml2::read_xml (doc)
         }
-        # obj <- get_metadata (obj, doc_xml)
         obj <- list()
         doc <- readChar (doc, file.info (doc)$size, useBytes = TRUE)
     }
@@ -201,13 +176,18 @@ fill_overpass_data <- function (obj, doc, quiet = TRUE, encoding = "UTF-8") {
     list (obj = obj, doc = doc)
 }
 
+
 get_metadata <- function (obj, doc) {
 
-    meta <- list (
-        timestamp = get_timestamp (doc),
-        OSM_version = get_osm_version (doc),
-        overpass_version = get_overpass_version (doc)
-    )
+    if (inherits (doc, "xml_document")) {
+        meta <- list (
+            timestamp = get_timestamp (doc),
+            OSM_version = get_osm_version (doc),
+            overpass_version = get_overpass_version (doc)
+        )
+    } else {
+        meta <- list ()
+    }
 
     q <- obj$overpass_call
 
@@ -225,6 +205,22 @@ get_metadata <- function (obj, doc) {
             meta$datetime_to <- x [2]
             meta$query_type <- "date"
 
+        } else if (grepl ("adiff", x [1])) {
+
+            if (length (x) < 2) {
+                stop ("unrecongised query format")
+            }
+            meta$datetime_from <- x [2]
+            meta$datetime_to <- x [4]
+            if (!is_datetime (meta$datetime_to) &
+                inherits(doc, "xml_document")) { # adiff opq without datetime2
+                meta$datetime_to <- xml2::xml_text (xml2::xml_find_all (
+                    doc,
+                    "//meta/@osm_base"
+                ))
+            }
+            meta$query_type <- "adiff"
+
         } else if (grepl ("diff", x [1])) {
 
             if (length (x) < 4) {
@@ -235,19 +231,70 @@ get_metadata <- function (obj, doc) {
             meta$query_type <- "diff"
         }
 
-    } else {
+    } else if (inherits (q, "overpass_query")) {
 
         if (!is.null (attr (q, "datetime2"))) {
 
-            meta$datetime_to <- attr (q, "datetime2")
             meta$datetime_from <- attr (q, "datetime")
-            meta$query_type <- "diff"
+            meta$datetime_to <- attr (q, "datetime2")
+
+            if (grepl ("adiff", q$prefix) ||
+                (
+                    inherits(doc, "xml_document") &&
+                    "action" %in% xml2::xml_name (xml2::xml_children (doc))
+                )
+            ) {
+                meta$query_type <- "adiff"
+            } else {
+                meta$query_type <- "diff"
+            }
 
         } else if (!is.null (attr (q, "datetime"))) {
 
-            meta$datetime_to <- attr (q, "datetime")
-            meta$query_type <- "date"
+            if (grepl ("adiff", q$prefix) ||
+                (
+                    inherits(doc, "xml_document") &&
+                    "action" %in% xml2::xml_name (xml2::xml_children (doc))
+                )
+            ) {
+                meta$datetime_from <- attr (q, "datetime")
+                meta$datetime_to <- xml2::xml_text (xml2::xml_find_all (
+                    doc,
+                    "//meta/@osm_base"
+                ))
+                meta$query_type <- "adiff"
+            } else {
+                meta$datetime_to <- attr (q, "datetime")
+                meta$query_type <- "date"
+            }
+
         }
+
+    } else if (inherits(doc, "xml_document")) { # is.null (q)
+
+        if ("action" %in% xml2::xml_name (xml2::xml_children (doc))) {
+            osm_actions <- xml2::xml_find_all (doc, ".//action")
+            action_type <- xml2::xml_attr (osm_actions, attr = "type")
+            # Adiff have <new> for deleted objects, but diff have not.
+            if (length (sel_del <- which (action_type %in% "delete")) > 0) {
+                if ("new" %in% xml2::xml_name (xml2::xml_children (
+                    osm_actions [sel_del [1]]
+                ))) {
+                    meta$query_type <- "adiff"
+                } else {
+                    meta$query_type <- "diff"
+                }
+            } else {
+                meta$query_type <- "diff"
+                warning (
+                    "OSM data is ambiguous and can correspond either to a ",
+                    "diff or an adiff query. As \"q\" parameter is missing, ",
+                    "it is not possible to distinguish.\n\tAssuming diff."
+                )
+            }
+
+        }
+
     }
 
     obj$meta <- meta
@@ -258,273 +305,42 @@ get_metadata <- function (obj, doc) {
     return (obj)
 }
 
-#' Make an 'sf' object from an 'sfc' list and associated data matrix returned
-#' from 'rcpp_osmdata_sf'
+
+#' Extract the metadata character matrices from `rcpp_osmdata_df` output,
+#' convert to df, and return only columns with data.
 #'
-#' @param ... list of objects, at least one of which must be of class 'sfc'
-#' @param stringsAsFactors Should character strings in 'sf' 'data.frame' be
-#' coerced to factors?
-#' @return An object of class `sf`
-#'
-#' @note Most of this code written by Edzer Pebesma, and taken from
-#' <https://github.com/edzer/sfr/blob/master/R/agr.R> and
-#' <https://github.com/edzer/sfr/blob/master/R/sfc.R>
-#'
+#' The "meta" components returns from `rcpp_osmdata_df()` are all named with
+#' underscore prefixes. These are prepended here with "osm" to provide
+#' standardised names.
 #' @noRd
-make_sf <- function (..., stringsAsFactors = FALSE) { # nolint
+get_meta_from_cpp_output <- function (res, what = "points") {
 
-    x <- list (...)
-    sf <- vapply (x, function (i) inherits (i, "sfc"),
-        FUN.VALUE = logical (1)
-    )
-    sf_column <- which (sf)
-
-    if (!is.null (names (x [[sf_column]]))) {
-        row.names <- names (x [[sf_column]])
-    } else {
-        row.names <- seq_along (x [[sf_column]])
+    this <- res [[paste0 (what, "_meta")]]
+    has_data <- apply (this, 2, function (i) any (nzchar (i)))
+    this <- this [, which (has_data), drop = FALSE]
+    if (ncol (this) > 0L) {
+        colnames (this) <- paste0 ("osm", colnames (this))
     }
 
-    df <- if (length (x) == 1) { # ONLY sfc
-        data.frame (row.names = row.names)
-    } else { # create a data.frame from list:
-        data.frame (x [-sf_column],
-            row.names = row.names,
-            stringsAsFactors = stringsAsFactors
-        )
-    }
-
-    object <- as.list (substitute (list (...))) [-1L]
-    arg_nm <- sapply (object, function (x) deparse (x)) # nolint
-    sfc_name <- make.names (arg_nm [sf_column])
-    # sfc_name <- "geometry"
-
-    df [[sfc_name]] <- x [[sf_column]]
-    attr (df, "sf_column") <- sfc_name
-    f <- factor (rep (NA_character_, length.out = ncol (df) - 1),
-        levels = c ("constant", "aggregate", "identity")
-    )
-    names (f) <- names (df) [-ncol (df)]
-    attr (df, "agr") <- f
-    class (df) <- c ("sf", class (df))
-
-    return (df)
+    return (as.data.frame (this))
 }
 
-sf_types <- c ("points", "lines", "polygons", "multilines", "multipolygons")
 
-#' Return an OSM Overpass query as an \link{osmdata} object in \pkg{sf}
-#' format.
+#' Extract the center matrices from `rcpp_osmdata_df` output,
+#' convert to df, and return only columns with data.
 #'
-#' @inheritParams osmdata_sp
-#' @param stringsAsFactors Should character strings in 'sf' 'data.frame' be
-#' coerced to factors?
-#' @return An object of class `osmdata` with the OSM components (points, lines,
-#'         and polygons) represented in \pkg{sf} format.
-#'
-#' @family extract
-#' @export
-#'
-#' @examples
-#' \dontrun{
-#' hampi_sf <- opq ("hampi india") %>%
-#'     add_osm_feature (key = "historic", value = "ruins") %>%
-#'     osmdata_sf ()
-#' }
-osmdata_sf <- function (q, doc, quiet = TRUE, stringsAsFactors = FALSE) { # nolint
+#' The "center" components returns from `rcpp_osmdata_df()` are all named with
+#' underscore prefixes. These are prepended here with "osm_center" to provide
+#' standardised names.
+#' @noRd
+get_center_from_cpp_output <- function (res, what = "points") {
 
-    obj <- osmdata () # uses class def
-
-    if (missing (q)) {
-        if (!quiet) {
-            message ("q missing: osmdata object will not include query")
-        }
-    } else if (is (q, "overpass_query")) {
-        obj$bbox <- q$bbox
-        obj$overpass_call <- opq_string_intern (q, quiet = quiet)
-    } else if (is.character (q)) {
-        obj$overpass_call <- q
-    } else {
-        stop ("q must be an overpass query or a character string")
+    this <- res [[paste0 (what, "_center")]]
+    has_data <- apply (this, 2, function (i) any (!is.na (i)))
+    this <- this [, which (has_data), drop = FALSE]
+    if (ncol (this) > 0L) {
+        colnames (this) <- paste0 ("osm_center", colnames (this))
     }
 
-    temp <- fill_overpass_data (obj, doc, quiet = quiet)
-    obj <- temp$obj
-    doc <- temp$doc
-
-    if (!quiet) {
-        message ("converting OSM data to sf format")
-    }
-    res <- rcpp_osmdata_sf (paste0 (doc))
-    # some objects don't have names. As explained in
-    # src/osm_convert::restructure_kv_mat, these instances do not get an osm_id
-    # column, so this is appended here:
-    if (!"osm_id" %in% names (res$points_kv)) {
-        res <- fill_kv (res, "points_kv", "points", stringsAsFactors)
-    }
-    if (!"osm_id" %in% names (res$polygons_kv)) {
-        res <- fill_kv (res, "polygons_kv", "polygons", stringsAsFactors)
-    }
-
-    if (missing (q)) {
-        obj$bbox <- paste (res$bbox, collapse = " ")
-    }
-
-    for (ty in sf_types) {
-        obj <- fill_objects (
-            res,
-            obj,
-            type = ty,
-            stringsAsFactors = stringsAsFactors
-        )
-    }
-
-    class (obj) <- c (class (obj), "osmdata_sf")
-
-    return (obj)
-}
-
-fill_kv <- function (res, kv_name, g_name, stringsAsFactors) { # nolint
-
-    if (!"osm_id" %in% names (res [[kv_name]])) {
-
-        if (nrow (res [[kv_name]]) == 0) {
-            res [[kv_name]] <- data.frame (
-                osm_id = names (res [[g_name]]),
-                stringsAsFactors = stringsAsFactors
-            )
-        } else {
-            res [[kv_name]] <- data.frame (
-                osm_id = rownames (res [[kv_name]]),
-                res [[kv_name]],
-                stringsAsFactors = stringsAsFactors
-            )
-        }
-    }
-
-    return (res)
-}
-
-fill_objects <- function (res, obj, type = "points",
-                          stringsAsFactors = FALSE) { # nolint
-
-    if (!type %in% sf_types) {
-        stop ("type must be one of ", paste (sf_types, collapse = " "))
-    }
-
-    geometry <- res [[type]]
-    obj_name <- paste0 ("osm_", type)
-    kv_name <- paste0 (type, "_kv")
-
-    if (length (res [[kv_name]]) > 0) {
-
-        if (!stringsAsFactors) {
-            res [[kv_name]] [] <- lapply (res [[kv_name]], as.character)
-        }
-        obj [[obj_name]] <- make_sf (
-            geometry,
-            res [[kv_name]],
-            stringsAsFactors = stringsAsFactors
-        )
-
-    } else if (length (obj [[obj_name]]) > 0) {
-
-        obj [[obj_name]] <- make_sf (
-            geometry,
-            stringsAsFactors = stringsAsFactors
-        )
-    }
-
-    return (obj)
-}
-
-#' Return an OSM Overpass query as an \link{osmdata} object in
-#' `silicate` (`SC`) format.
-#'
-#' @inheritParams osmdata_sp
-#' @return An object of class `osmdata` representing the original OSM hierarchy
-#'      of nodes, ways, and relations.
-#'
-#' @note The `silicate` format is currently highly experimental, and
-#'      recommended for use only if you really know what you're doing.
-#'
-#' @family extract
-#' @export
-#'
-#' @examples
-#' \dontrun{
-#' hampi_sf <- opq ("hampi india") %>%
-#'     add_osm_feature (key = "historic", value = "ruins") %>%
-#'     osmdata_sc ()
-#' }
-osmdata_sc <- function (q, doc, quiet = TRUE) {
-
-    obj <- osmdata () # class def used here to for fill_overpass_data fn
-
-    if (missing (q) & !quiet) {
-        message ("q missing: osmdata object will not include query")
-    } else if (is (q, "overpass_query")) {
-        obj$bbox <- q$bbox
-        obj$overpass_call <- opq_string_intern (q, quiet = quiet)
-    } else if (is.character (q)) {
-        obj$overpass_call <- q
-    } else {
-        stop ("q must be an overpass query or a character string")
-    }
-
-    temp <- fill_overpass_data (obj, doc, quiet = quiet)
-    obj <- temp$obj
-    doc <- temp$doc
-
-    if (!quiet) {
-        message ("converting OSM data to sc format")
-    }
-
-    res <- rcpp_osmdata_sc (paste0 (temp$doc))
-
-    if (nrow (res$object_link_edge) > 0L) {
-        res$object_link_edge$native_ <- TRUE
-    }
-
-    obj <- list () # SC **does not** use osmdata class definition
-    obj$nodes <- tibble::as_tibble (res$nodes)
-    obj$relation_members <- tibble::as_tibble (res$relation_members)
-    obj$relation_properties <- tibble::as_tibble (res$relation_properties)
-    obj$object <- tibble::as_tibble (res$object)
-    obj$object_link_edge <- tibble::as_tibble (res$object_link_edge)
-    obj$edge <- tibble::as_tibble (res$edge)
-    obj$vertex <- tibble::as_tibble (res$vertex)
-    obj$meta <- tibble::tibble (
-        proj = NA_character_,
-        ctime = temp$obj$meta$timestamp,
-        OSM_version = temp$obj$meta$OSM_version,
-        overpass_version = temp$obj$meta$overpass_version
-    )
-
-    if (!missing (q)) {
-        if (!is.character (q)) {
-            obj$meta$bbox <- q$bbox
-        }
-    } else {
-        obj$meta$bbox <- bbox_to_string (obj)
-    }
-
-    attr (obj, "join_ramp") <- c (
-        "nodes",
-        "relation_members",
-        "relation_properties",
-        "object",
-        "object_link_edge",
-        "edge",
-        "vertex"
-    )
-    attr (obj, "class") <- c ("SC", "sc", "osmdata_sc")
-
-    return (obj)
-}
-
-getbb_sc <- function (x) {
-
-    apply (x$vertex [, 1:2], 2, range) %>%
-        bbox_to_string ()
+    return (as.data.frame (this))
 }
