@@ -37,7 +37,7 @@ jobs:
 
     - name: Build package
       run: |
-        Rscript -e "devtools::build(args = c('--no-resave-data', '--no-manual'), binary = TRUE)"
+        Rscript -e "devtools::build(binary = TRUE)"
     
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
