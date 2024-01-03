@@ -43,4 +43,4 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: ${{ github.event.inputs.os }}-R-${{ github.event.inputs.r-version }}-binary
-        path: ./*.tar.gz
+        path: osmdata_*.zip
