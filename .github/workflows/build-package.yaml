@@ -1,0 +1,46 @@
+name: Build R Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      r-version:
+        description: 'R version'
+        required: true
+        default: 'release'
+      os:
+        description: 'Operating System'
+        required: true
+        type: choice
+        options:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+
+jobs:
+  build:
+    runs-on: ${{ github.event.inputs.os }}
+    strategy:
+      fail-fast: false
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup R
+      uses: r-lib/actions/setup-r@v1
+      with:
+        r-version: ${{ github.event.inputs.r-version }}
+
+    - name: Install dependencies
+      run: |
+        install.packages('devtools')
+        devtools::install_deps(dependencies = TRUE)
+
+    - name: Build package
+      run: |
+        devtools::build(args = c('--no-resave-data', '--no-manual'), binary = TRUE, path = 'build/')
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{ github.event.inputs.os }}-R-${{ github.event.inputs.r-version }}-binary
+        path: build/*.tar.gz
