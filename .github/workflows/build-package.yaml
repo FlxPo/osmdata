@@ -37,10 +37,10 @@ jobs:
 
     - name: Build package
       run: |
-        Rscript -e "devtools::build(args = c('--no-resave-data', '--no-manual'), binary = TRUE, path = 'build/')"
+        Rscript -e "devtools::build(args = c('--no-resave-data', '--no-manual'), binary = TRUE)"
     
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
       with:
         name: ${{ github.event.inputs.os }}-R-${{ github.event.inputs.r-version }}-binary
-        path: build/*.tar.gz
+        path: ./*.tar.gz
