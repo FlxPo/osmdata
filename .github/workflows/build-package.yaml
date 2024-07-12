@@ -41,8 +41,9 @@ jobs:
     - name: Build package (Windows)
       if: runner.os == 'Windows'
       run: |
-        "C:\Rtools\bin\bash.exe" -c "R CMD build ."
-        "C:\Rtools\bin\bash.exe" -c "R CMD INSTALL --build ."
+        R CMD build .
+        R CMD INSTALL --build .
+      shell: bash
 
     - name: Upload artifact
       uses: actions/upload-artifact@v2
