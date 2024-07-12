@@ -5,13 +5,6 @@ on:
     tags:
       - 'v*.*.*'
   workflow_dispatch:
-    inputs:
-      tag_name:
-        description: 'Tag name'
-        required: true
-      release_name:
-        description: 'Release name'
-        required: true
 
 jobs:
   build:
@@ -30,13 +23,10 @@ jobs:
     - name: Setup Pandoc
       uses: r-lib/actions/setup-pandoc@v2
 
-    - name: Install remotes package
-      run: |
-        Rscript -e 'install.packages("remotes")'
-
-    - name: Install dependencies
-      run: |
-        Rscript -e 'remotes::install_deps(dependencies = TRUE)'
+    - name: Setup R dependencies
+      uses: r-lib/actions/setup-r-dependencies@v2
+      with:
+        extra-packages: rmarkdown
 
     - name: Build package
       run: |
@@ -44,17 +34,11 @@ jobs:
         R CMD INSTALL --build .
       shell: bash
 
-    - name: Extract version (Linux/Mac)
-      if: runner.os != 'Windows'
+    - name: Extract version
+      id: get_version
       run: |
         version=$(grep -m1 '^Version:' DESCRIPTION | awk '{print $2}')
         echo "PACKAGE_VERSION=$version" >> $GITHUB_ENV
-
-    - name: Extract version (Windows)
-      if: runner.os == 'Windows'
-      run: |
-        $version = (Get-Content DESCRIPTION | Select-String -Pattern '^Version:' | ForEach-Object { $_.Line.Split(' ')[1] }).Trim()
-        echo "PACKAGE_VERSION=$version" >> $env:GITHUB_ENV
 
     - name: Upload artifact
       uses: actions/upload-artifact@v2
