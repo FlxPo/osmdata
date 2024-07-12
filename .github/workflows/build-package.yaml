@@ -60,7 +60,7 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: r-package-${{ matrix.os }}
-        path: '*.tar.gz' # or '*.zip' for Windows binaries
+        path: '*.tar.gz,*.zip' # or '*.zip' for Windows binaries
 
   release:
     needs: build
@@ -69,22 +69,19 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Download artifacts (Linux)
-      if: matrix.os == 'ubuntu-latest'
+    - name: Download artifacts (Ubuntu)
       uses: actions/download-artifact@v2
       with:
         name: r-package-ubuntu-latest
         path: binaries/ubuntu
 
     - name: Download artifacts (Windows)
-      if: matrix.os == 'windows-latest'
       uses: actions/download-artifact@v2
       with:
         name: r-package-windows-latest
         path: binaries/windows
 
     - name: Download artifacts (macOS)
-      if: matrix.os == 'macos-latest'
       uses: actions/download-artifact@v2
       with:
         name: r-package-macos-latest
@@ -92,8 +89,41 @@ jobs:
 
     - name: Create Release
       id: create_release
-      uses: softprops/action-gh-release@v1
-      with:
-        files: binaries/*
+      uses: actions/create-release@v1
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+      with:
+        tag_name: ${{ github.event.inputs.tag_name }}
+        release_name: osmdata_${{ env.PACKAGE_VERSION }}
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Asset (Ubuntu)
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: binaries/ubuntu/*.tar.gz
+        asset_name: osmdata_${{ env.PACKAGE_VERSION }}_ubuntu.tar.gz
+        asset_content_type: application/gzip
+
+    - name: Upload Release Asset (Windows)
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: binaries/windows/*.zip
+        asset_name: osmdata_${{ env.PACKAGE_VERSION }}_windows.zip
+        asset_content_type: application/zip
+
+    - name: Upload Release Asset (macOS)
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: binaries/macos/*.tar.gz
+        asset_name: osmdata_${{ env.PACKAGE_VERSION }}_macos.tar.gz
+        asset_content_type: application/gzip
