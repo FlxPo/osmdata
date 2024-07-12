@@ -12,7 +12,7 @@ on:
       release_name:
         description: 'Release name'
         required: true
-        
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
@@ -72,56 +72,16 @@ jobs:
     - name: Download artifacts
       uses: actions/download-artifact@v2
       with:
-        name: r-package-ubuntu-latest
-        path: binaries/ubuntu
-
-    - uses: actions/download-artifact@v2
-      with:
-        name: r-package-windows-latest
-        path: binaries/windows
-
-    - uses: actions/download-artifact@v2
-      with:
-        name: r-package-macos-latest
-        path: binaries/macos
+        name: r-package-${{ matrix.os }}
+        path: binaries
 
     - name: Create Release
       id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+      uses: softprops/action-gh-release@v1
       with:
-        tag_name: ${{ github.event.inputs.tag_name }}
-        release_name: osmdata_${{ env.PACKAGE_VERSION }}
-        draft: false
-        prerelease: false
-
-    - name: Upload Release Asset (Ubuntu)
-      uses: actions/upload-release-asset@v1
+        files: binaries/*
       env:
-        GITHUB_TOKEN: ${{ secrets.GH_PAT }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: binaries/ubuntu/*.tar.gz
-        asset_name: osmdata_${{ env.PACKAGE_VERSION }}_ubuntu.tar.gz
-        asset_content_type: application/gzip
-
-    - name: Upload Release Asset (Windows)
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GH_PAT }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: binaries/windows/*.zip
-        asset_name: osmdata_${{ env.PACKAGE_VERSION }}_windows.zip
-        asset_content_type: application/zip
-
-    - name: Upload Release Asset (macOS)
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GH_PAT }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: binaries/macos/*.tar.gz
-        asset_name: osmdata_${{ env.PACKAGE_VERSION }}_macos.tar.gz
-        asset_content_type: application/gzip
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        VERSION: ${{ steps.get_version.outputs.PACKAGE_VERSION }}
+        TAG_NAME: ${{ github.event.inputs.tag_name }}
+        RELEASE_NAME: ${{ github.event.inputs.release_name }}
