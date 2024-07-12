@@ -1,46 +1,100 @@
-name: Build R Package
+name: Build and Release R Package
 
 on:
-  workflow_dispatch:
-    inputs:
-      r-version:
-        description: 'R version'
-        required: true
-        default: 'release'
-      os:
-        description: 'Operating System'
-        required: true
-        type: choice
-        options:
-          - ubuntu-latest
-          - macos-latest
-          - windows-latest
+  push:
+    tags:
+      - 'v*.*.*'
 
 jobs:
   build:
-    runs-on: ${{ github.event.inputs.os }}
+    runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
-    - uses: actions/checkout@v2
+    - name: Checkout code
+      uses: actions/checkout@v2
 
     - name: Setup R
       uses: r-lib/actions/setup-r@v2
-      with:
-        r-version: ${{ github.event.inputs.r-version }}
 
     - name: Install dependencies
       run: |
-        Rscript -e "install.packages('devtools')"
-        Rscript -e "devtools::install_deps(dependencies = TRUE)"
+        Rscript -e 'install.packages("devtools")'
+        Rscript -e 'devtools::install_deps(dependencies = TRUE)'
 
     - name: Build package
       run: |
-        Rscript -e "devtools::build(binary = TRUE)"
-    
-    - name: Upload artifacts
+        R CMD build .
+        R CMD INSTALL --build .
+      
+    - name: Upload artifact
       uses: actions/upload-artifact@v2
       with:
-        name: ${{ github.event.inputs.os }}-R-${{ github.event.inputs.r-version }}-binary
-        path: osmdata_*.zip
+        name: r-package-${{ matrix.os }}
+        path: '*.tar.gz' # or '*.zip' for Windows binaries
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v2
+      with:
+        name: r-package-ubuntu-latest
+        path: binaries/ubuntu
+
+    - uses: actions/download-artifact@v2
+      with:
+        name: r-package-windows-latest
+        path: binaries/windows
+
+    - uses: actions/download-artifact@v2
+      with:
+        name: r-package-macos-latest
+        path: binaries/macos
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Asset (Ubuntu)
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: binaries/ubuntu/*.tar.gz
+        asset_name: r-package-ubuntu.tar.gz
+        asset_content_type: application/gzip
+
+    - name: Upload Release Asset (Windows)
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: binaries/windows/*.zip
+        asset_name: r-package-windows.zip
+        asset_content_type: application/zip
+
+    - name: Upload Release Asset (macOS)
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: binaries/macos/*.tar.gz
+        asset_name: r-package-macos.tar.gz
+        asset_content_type: application/gzip
