@@ -89,7 +89,7 @@ jobs:
       id: create_release
       uses: actions/create-release@v1
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GH_PAT }}
       with:
         tag_name: ${{ github.event.inputs.tag_name }}
         release_name: osmdata_${{ env.PACKAGE_VERSION }}
@@ -99,7 +99,7 @@ jobs:
     - name: Upload Release Asset (Ubuntu)
       uses: actions/upload-release-asset@v1
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GH_PAT }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: binaries/ubuntu/*.tar.gz
@@ -109,7 +109,7 @@ jobs:
     - name: Upload Release Asset (Windows)
       uses: actions/upload-release-asset@v1
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GH_PAT }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: binaries/windows/*.zip
@@ -119,7 +119,7 @@ jobs:
     - name: Upload Release Asset (macOS)
       uses: actions/upload-release-asset@v1
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GH_PAT }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: binaries/macos/*.tar.gz
