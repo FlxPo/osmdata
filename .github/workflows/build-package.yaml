@@ -45,9 +45,13 @@ jobs:
       run: |
         echo 'options(repos = c(CRAN = "https://cran.microsoft.com/snapshot/2022-01-01/"))' >> ~/.Rprofile
 
+    - name: Install remotes package
+      run: |
+        Rscript -e 'install.packages("remotes")'
+
     - name: Install dependencies
       run: |
-        Rscript -e 'install.packages("devtools", dependencies = TRUE)'
+        Rscript -e 'remotes::install_deps(dependencies = TRUE)'
 
     - name: Build package
       run: |
