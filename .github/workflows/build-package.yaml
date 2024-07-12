@@ -56,11 +56,19 @@ jobs:
         echo "PACKAGE_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       shell: pwsh
 
-    - name: Upload artifact
+    - name: Upload artifact (Unix)
+      if: runner.os != 'Windows'
       uses: actions/upload-artifact@v2
       with:
         name: r-package-${{ matrix.os }}
-        path: '*.tar.gz,*.zip' # or '*.zip' for Windows binaries
+        path: '*.tar.gz'
+    
+    - name: Upload artifact (Windows)
+      if: runner.os == 'Windows'
+      uses: actions/upload-artifact@v2
+      with:
+        name: r-package-${{ matrix.os }}
+        path: '*.zip'
 
   release:
     needs: build
