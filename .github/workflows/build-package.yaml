@@ -30,21 +30,6 @@ jobs:
     - name: Setup Pandoc
       uses: r-lib/actions/setup-pandoc@v2
 
-    - name: Set CRAN repository (Linux)
-      if: runner.os == 'Linux'
-      run: |
-        echo 'options(repos = c(CRAN = "https://packagemanager.rstudio.com/all/latest"))' >> ~/.Rprofile
-
-    - name: Set CRAN repository (macOS)
-      if: runner.os == 'macOS'
-      run: |
-        echo 'options(repos = c(CRAN = "https://packagemanager.rstudio.com/all/latest"))' >> ~/.Rprofile
-
-    - name: Set CRAN repository (Windows)
-      if: runner.os == 'Windows'
-      run: |
-        echo 'options(repos = c(CRAN = "https://cran.microsoft.com/snapshot/2022-01-01/"))' >> ~/.Rprofile
-
     - name: Install remotes package
       run: |
         Rscript -e 'install.packages("remotes")'
@@ -59,11 +44,19 @@ jobs:
         R CMD INSTALL --build .
       shell: bash
 
-    - name: Extract version
+    - name: Extract version (Linux/Mac)
+      if: runner.os != 'Windows'
       id: get_version
       run: |
         version=$(grep -m1 '^Version:' DESCRIPTION | awk '{print $2}')
         echo "PACKAGE_VERSION=$version" >> $GITHUB_ENV
+
+    - name: Extract version (Windows)
+      if: runner.os == 'Windows'
+      id: get_version
+      run: |
+        $version = (Get-Content DESCRIPTION | Select-String -Pattern '^Version:' | ForEach-Object { $_.Line.Split(' ')[1] }).Trim()
+        echo "PACKAGE_VERSION=$version" >> $env:GITHUB_ENV
 
     - name: Upload artifact
       uses: actions/upload-artifact@v2
