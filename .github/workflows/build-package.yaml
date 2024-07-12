@@ -34,11 +34,20 @@ jobs:
         R CMD INSTALL --build .
       shell: bash
 
-    - name: Extract version
-      id: get_version
+    - name: Extract version (Linux and macOS)
+      if: runner.os != 'Windows'
+      id: get_version_unix
       run: |
         version=$(grep -m1 '^Version:' DESCRIPTION | awk '{print $2}')
         echo "PACKAGE_VERSION=$version" >> $GITHUB_ENV
+
+    - name: Extract version (Windows)
+      if: runner.os == 'Windows'
+      id: get_version_windows
+      run: |
+        $version = (Get-Content DESCRIPTION | Select-String -Pattern '^Version:' | ForEach-Object { $_.Line.Split(' ')[1] }).Trim()
+        echo "PACKAGE_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      shell: pwsh
 
     - name: Upload artifact
       uses: actions/upload-artifact@v2
